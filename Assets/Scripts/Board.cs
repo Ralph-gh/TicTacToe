@@ -2,31 +2,124 @@ using UnityEngine;
 
 public class Board : MonoBehaviour
 {
-    [SerializeField] private Cell[] cells;
-    [SerializeField] private GameObject[] marks; // X and O prefabs
-    private int[,] boardState = new int[3, 3];
+    [Header("Prefabs")]
+    [SerializeField] private GameObject cellPrefab;
+    [SerializeField] private GameObject[] marks;
+
+    [Header("Runtime References")]
+    [SerializeField] private Cell[] cells = new Cell[9];
+
+    private int[,] boardState = new int[3, 3]; // Added this critical line
+
+    private void Start()
+    {
+        InitializeBoard();
+    }
+
+    private void InitializeBoard()
+    {
+        // Validate prefab
+        if (cellPrefab == null)
+        {
+            Debug.LogError("Cell prefab not assigned!", this);
+            return;
+        }
+
+        // Validate marks
+        if (marks == null || marks.Length != 2)
+        {
+            Debug.LogError("Marks array not properly configured!", this);
+            return;
+        }
+
+        // Create grid
+        for (int i = 0; i < 9; i++)
+        {
+            GameObject cellObj = Instantiate(cellPrefab, transform);
+            cellObj.name = $"Cell_{i}";
+
+            // Get and configure cell
+            Cell cell = cellObj.GetComponent<Cell>();
+            if (cell == null)
+            {
+                Debug.LogError("Instantiated cell missing Cell script!", cellObj);
+                continue;
+            }
+
+            // Manually assign board reference
+            cell.board = this;
+            cell.index = i;
+            cells[i] = cell;
+        }
+    }
 
     public void MarkCell(int index, int playerIndex)
     {
+        if (index < 0 || index >= 9)
+        {
+            Debug.LogError($"Invalid cell index: {index}");
+            return;
+        }
+
         int row = index / 3;
         int col = index % 3;
         boardState[row, col] = playerIndex + 1;
 
-        Instantiate(marks[playerIndex], cells[index].transform);
+        // Safety checks
+        if (cells[index] == null)
+        {
+            Debug.LogError($"Cell at index {index} is null!");
+            return;
+        }
+
+        if (playerIndex < 0 || playerIndex >= marks.Length)
+        {
+            Debug.LogError($"Invalid player index: {playerIndex}");
+            return;
+        }
+
+        if (marks[playerIndex] == null)
+        {
+            Debug.LogError($"Mark prefab for player {playerIndex} is null!");
+            return;
+        }
+
+        // Instantiate the mark
+        GameObject mark = Instantiate(marks[playerIndex], cells[index].transform);
+        mark.SetActive(true);
         cells[index].SetInteractable(false);
     }
 
     public void UndoMark(int index)
     {
+        if (index < 0 || index >= 9)
+        {
+            Debug.LogError($"Invalid cell index: {index}");
+            return;
+        }
+
         int row = index / 3;
         int col = index % 3;
         boardState[row, col] = 0;
+
+        if (cells[index] == null)
+        {
+            Debug.LogError($"Cell at index {index} is null!");
+            return;
+        }
+
         cells[index].ClearMark();
         cells[index].SetInteractable(true);
     }
 
     public bool IsCellEmpty(int index)
     {
+        if (index < 0 || index >= 9)
+        {
+            Debug.LogError($"Invalid cell index: {index}");
+            return false;
+        }
+
         int row = index / 3;
         int col = index % 3;
         return boardState[row, col] == 0;
@@ -77,8 +170,11 @@ public class Board : MonoBehaviour
         boardState = new int[3, 3];
         foreach (Cell cell in cells)
         {
-            cell.SetInteractable(true);
-            cell.ClearMark();
+            if (cell != null)
+            {
+                cell.SetInteractable(true);
+                cell.ClearMark();
+            }
         }
     }
 }

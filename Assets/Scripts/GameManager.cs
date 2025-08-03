@@ -4,14 +4,21 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [SerializeField] private Board board;
     [SerializeField] public Player[] players;
-    private int currentPlayerIndex;
+    [HideInInspector] public Board board;
+    public int currentPlayerIndex;
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            board = FindObjectOfType<Board>();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     private void Start()
@@ -35,5 +42,6 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log(winner != null ? $"{winner.name} wins!" : "It's a draw!");
+        // Add restart logic here if needed
     }
 }

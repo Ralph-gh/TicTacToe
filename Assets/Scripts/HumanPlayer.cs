@@ -1,18 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class Human : MonoBehaviour
+public class HumanPlayer : Player
 {
-    // Start is called before the first frame update
-    void Start()
+    public override void BeginTurn()
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        // Human interaction is handled through Cell clicks
     }
 }
