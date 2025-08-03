@@ -1,0 +1,51 @@
+# This .gitignore is tailored for Unity projects.
+
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+
+# Auto-generated VS/JetBrains files
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# Unity settings files
+*.unitypackage
+*.DS_Store
+.DS_Store
+*.apk
+*.aab
+
+# Crash logs
+sysinfo.txt
+
+# Mac system files
+._*
+*.DS_Store
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
+# JetBrains Rider
+.idea/
+
+# Other
+*.log
+*.bak
+*.backup
