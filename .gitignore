@@ -9,6 +9,7 @@
 [Mm]emoryCaptures/
 
 # Auto-generated VS/JetBrains files
+.vs/
 .vscode/
 *.csproj
 *.unityproj
