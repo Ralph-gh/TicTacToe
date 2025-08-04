@@ -86,6 +86,8 @@ public class Board : MonoBehaviour
 
         // Instantiate the mark
         GameObject mark = Instantiate(marks[playerIndex], cells[index].transform);
+        mark.transform.localPosition = Vector3.zero; // This centers the mark
+        mark.transform.localRotation = Quaternion.identity;
         mark.SetActive(true);
         cells[index].SetInteractable(false);
     }

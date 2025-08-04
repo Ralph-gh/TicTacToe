@@ -38,21 +38,25 @@ public class Cell : MonoBehaviour
 
     private void OnCellClicked()
     {
-        if (board == null)
+
+        /// Early exit checks
+        if (GameManager.Instance == null || board == null)
         {
-            Debug.LogError("Board reference lost!", this);
+            Debug.LogError("Missing references in Cell click");
             return;
         }
 
-        if (GameManager.Instance == null)
+        // Only allow human player to click during their turn
+        if (!(GameManager.Instance.players[GameManager.Instance.currentPlayerIndex] is HumanPlayer))
         {
-            Debug.LogError("GameManager instance missing!", this);
+            Debug.Log("Not human player's turn");
             return;
         }
 
         if (board.IsCellEmpty(index))
         {
             board.MarkCell(index, GameManager.Instance.currentPlayerIndex);
+            GameManager.Instance.SwitchPlayer();
         }
     }
 
