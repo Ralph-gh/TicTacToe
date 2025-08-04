@@ -15,7 +15,9 @@ public class Board : MonoBehaviour
     {
         InitializeBoard();
     }
-
+    
+    public int GetCellState(int index) => boardState[index / 3, index % 3];
+    
 
     private void InitializeBoard()
     {

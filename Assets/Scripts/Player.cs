@@ -26,4 +26,5 @@ public abstract class Player : MonoBehaviour
             GameManager.Instance?.SwitchPlayer();
         }
     }
+  
 }

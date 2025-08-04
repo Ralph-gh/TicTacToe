@@ -5,17 +5,13 @@ public class AIPlayer : Player
 {
     [Header("AI Settings")]
     [SerializeField] private float moveDelay = 0.5f;
-    [SerializeField] private int maxDepth = 5;
-
     private bool isProcessingMove = false;
-    private Coroutine activeCoroutine;
+    private int[,] simulationBoard = new int[3, 3]; // Invisible simulation
 
     public override void BeginTurn()
     {
-        if (!isProcessingMove && GameManager.Instance.currentPlayer == this)
-        {
-            activeCoroutine = StartCoroutine(ExecuteAITurn());
-        }
+        if (!isProcessingMove)
+            StartCoroutine(ExecuteAITurn());
     }
 
     private IEnumerator ExecuteAITurn()
@@ -23,106 +19,128 @@ public class AIPlayer : Player
         isProcessingMove = true;
         yield return new WaitForSeconds(moveDelay);
 
-        // Only proceed if still our turn and game is active
-        if (GameManager.Instance.currentPlayer != this || GameManager.Instance.gameEnded)
+        // 1. Copy current board state to simulation
+        CopyRealBoardToSimulation();
+
+        // 2. Find best move (invisible simulation)
+        int bestMove = FindBestMove(simulationBoard);
+
+        // 3. Make ONLY ONE VISIBLE MOVE
+        if (bestMove != -1)
+            board.MarkCell(bestMove, playerIndex);
+
+        GameManager.Instance.CheckGameState();
+        isProcessingMove = false;
+    }
+
+    private void CopyRealBoardToSimulation()
+    {
+        for (int i = 0; i < 9; i++)
         {
-            SafeAbort();
-            yield break;
+            int row = i / 3;
+            int col = i % 3;
+            simulationBoard[row, col] = board.IsCellEmpty(i) ? 0 :
+                                      (board.GetCellState(i) == 1 ? 1 : 2);
         }
+    }
 
-        // Find best move using your MiniMax logic
-        int bestMove = -1;
+    private int FindBestMove(int[,] simulatedBoard)
+    {
         int bestScore = int.MinValue;
-        int[] validMoves = board.GetEmptyCells();
+        int bestMove = -1;
 
-        foreach (int move in validMoves)
+        for (int i = 0; i < 9; i++)
         {
-            if (!board.IsCellEmpty(move)) continue;
+            if (simulatedBoard[i / 3, i % 3] != 0) continue;
 
-            board.MarkCell(move, playerIndex);
-            int score = 0;
-            yield return StartCoroutine(
-                EvaluateMove(board, 0, false, (result) => score = result)
-            );
-            board.UndoMark(move);
+            // Simulate move in memory
+            simulatedBoard[i / 3, i % 3] = 2; // AI is always '2' (O)
+            int score = MiniMax(simulatedBoard, 0, false);
+            simulatedBoard[i / 3, i % 3] = 0; // Revert simulation
 
-            if (score > bestScore || bestMove == -1)
+            if (score > bestScore)
             {
                 bestScore = score;
-                bestMove = move;
+                bestMove = i;
             }
-
-            yield return null; // Prevent freezing
         }
-
-        // Make ONE move if valid
-        if (bestMove != -1 && board.IsCellEmpty(bestMove))
-        {
-            board.MarkCell(bestMove, playerIndex);
-            GameManager.Instance.CheckGameState(); // Handles turn switching
-        }
-
-        isProcessingMove = false;
+        return bestMove;
     }
 
-    private IEnumerator EvaluateMove(Board board, int depth, bool isMaximizing, System.Action<int> callback)
+    private int MiniMax(int[,] boardState, int depth, bool isMaximizing)
     {
-        if (depth > maxDepth || board == null)
+        int result = CheckSimulatedWinner(boardState);
+        if (result != 0) return result == 2 ? 10 - depth : depth - 10;
+        if (IsSimulatedBoardFull(boardState)) return 0;
+
+        if (isMaximizing)
         {
-            callback(0);
-            yield break;
-        }
+            int bestScore = int.MinValue;
+            for (int i = 0; i < 9; i++)
+            {
+                if (boardState[i / 3, i % 3] != 0) continue;
 
-        int gameResult = board.CheckWinner();
-        if (gameResult != 0)
+                boardState[i / 3, i % 3] = 2; // AI move
+                bestScore = Mathf.Max(bestScore, MiniMax(boardState, depth + 1, false));
+                boardState[i / 3, i % 3] = 0;
+            }
+            return bestScore;
+        }
+        else
         {
-            callback(gameResult == playerIndex + 1 ? 10 - depth : depth - 10);
-            yield break;
+            int bestScore = int.MaxValue;
+            for (int i = 0; i < 9; i++)
+            {
+                if (boardState[i / 3, i % 3] != 0) continue;
+
+                boardState[i / 3, i % 3] = 1; // Human move
+                bestScore = Mathf.Min(bestScore, MiniMax(boardState, depth + 1, true));
+                boardState[i / 3, i % 3] = 0;
+            }
+            return bestScore;
         }
-
-        int[] moves = board.GetEmptyCells();
-        if (moves.Length == 0)
-        {
-            callback(0);
-            yield break;
-        }
-
-        int currentScore = isMaximizing ? int.MinValue : int.MaxValue;
-        int processedMoves = 0;
-
-        foreach (int move in moves)
-        {
-            board.MarkCell(move, isMaximizing ? playerIndex : (playerIndex + 1) % 2);
-            int score = 0;
-            yield return StartCoroutine(
-                EvaluateMove(board, depth + 1, !isMaximizing, (result) => score = result)
-            );
-            board.UndoMark(move);
-
-            currentScore = isMaximizing
-                ? Mathf.Max(currentScore, score)
-                : Mathf.Min(currentScore, score);
-
-            if (++processedMoves % 2 == 0)
-                yield return null;
-        }
-
-        callback(currentScore);
     }
-
-    private void SafeAbort()
+    private int CheckSimulatedWinner(int[,] boardState)
     {
-        if (activeCoroutine != null)
-            StopCoroutine(activeCoroutine);
+        // Check rows and columns
+        for (int i = 0; i < 3; i++)
+        {
+            // Rows
+            if (boardState[i, 0] != 0 &&
+                boardState[i, 0] == boardState[i, 1] &&
+                boardState[i, 1] == boardState[i, 2])
+                return boardState[i, 0];
 
-        isProcessingMove = false;
+            // Columns
+            if (boardState[0, i] != 0 &&
+                boardState[0, i] == boardState[1, i] &&
+                boardState[1, i] == boardState[2, i])
+                return boardState[0, i];
+        }
+
+        // Diagonals
+        if (boardState[0, 0] != 0 &&
+            boardState[0, 0] == boardState[1, 1] &&
+            boardState[1, 1] == boardState[2, 2])
+            return boardState[0, 0];
+
+        if (boardState[0, 2] != 0 &&
+            boardState[0, 2] == boardState[1, 1] &&
+            boardState[1, 1] == boardState[2, 0])
+            return boardState[0, 2];
+
+        return 0; // No winner yet
     }
-
-    void OnDisable()
+        private bool IsSimulatedBoardFull(int[,] boardState)
     {
-        SafeAbort();
+        for (int i = 0; i < 9; i++)
+            if (boardState[i / 3, i % 3] == 0) return false;
+        return true;
     }
 }
+
+
+
 /*private int MiniMax(Board currentBoard, int depth, bool isMaximizing)
    {
        if (depth > 9) return 0; // Safety check
