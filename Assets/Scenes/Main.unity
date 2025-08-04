@@ -152,8 +152,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerIndex: 0
-  board: {fileID: 0}
+  board: {fileID: 1197548803}
   moveDelay: 0.5
+  maxDepth: 5
 --- !u!4 &37367639
 Transform:
   m_ObjectHideFlags: 0
@@ -429,7 +430,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerIndex: 0
-  board: {fileID: 0}
+  board: {fileID: 1197548803}
 --- !u!4 &887575559
 Transform:
   m_ObjectHideFlags: 0
@@ -1256,5 +1257,5 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 1252703439}
   - {fileID: 887575559}
-  - {fileID: 37367639}
   - {fileID: 1595251616}
+  - {fileID: 37367639}

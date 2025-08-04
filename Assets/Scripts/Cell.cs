@@ -1,76 +1,62 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(Button))]
 public class Cell : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField] public Board board; // Now serialized for manual assignment
-    public int index;
+    [HideInInspector] public Board board;
+    [HideInInspector] public int index;
+    public bool IsEmpty { get; private set; } = true;
 
     private Button button;
+    private Transform markContainer;
 
     private void Awake()
     {
-        // Get required components
         button = GetComponent<Button>();
-        if (button == null)
-        {
-            Debug.LogError("Cell is missing Button component!", this);
-            return;
-        }
+        markContainer = transform.Find("MarkContainer") ?? transform;
+    }
 
-        // Try to find board if not assigned
-        if (board == null)
-        {
-            board = GetComponentInParent<Board>();
-            if (board == null)
-            {
-                Debug.LogError("Board reference not found in parent!", this);
-                return;
-            }
-        }
-
-        // Safe initialization
-        button.onClick.RemoveAllListeners(); // Clear existing listeners
+    // Replacement for Initialize method
+    public void Setup(Board linkedBoard, int cellIndex)
+    {
+        board = linkedBoard;
+        index = cellIndex;
         button.onClick.AddListener(OnCellClicked);
     }
 
     private void OnCellClicked()
     {
-
-        /// Early exit checks
-        if (GameManager.Instance == null || board == null)
+        if (IsEmpty && board != null)
         {
-            Debug.LogError("Missing references in Cell click");
-            return;
-        }
-
-        // Only allow human player to click during their turn
-        if (!(GameManager.Instance.players[GameManager.Instance.currentPlayerIndex] is HumanPlayer))
-        {
-            Debug.Log("Not human player's turn");
-            return;
-        }
-
-        if (board.IsCellEmpty(index))
-        {
-            board.MarkCell(index, GameManager.Instance.currentPlayerIndex);
-            GameManager.Instance.SwitchPlayer();
+            // Get reference to HumanPlayer and call MakeMove properly
+            HumanPlayer humanPlayer = GameManager.Instance.players[0] as HumanPlayer;
+            if (humanPlayer != null)
+            {
+                humanPlayer.MakeMove(index);
+            }
         }
     }
 
-    public void SetInteractable(bool state)
+    public void Mark(int playerIndex)
     {
-        if (button != null) button.interactable = state;
+        IsEmpty = false;
+        // Visual marking handled by Board
     }
 
     public void ClearMark()
     {
-        foreach (Transform child in transform)
+        IsEmpty = true;
+        foreach (Transform child in markContainer)
         {
-            if (child != transform) // Don't destroy self
-                Destroy(child.gameObject);
+            Destroy(child.gameObject);
+        }
+    }
+
+    public void SetInteractable(bool interactable)
+    {
+        if (button != null)
+        {
+            button.interactable = interactable;
         }
     }
 }

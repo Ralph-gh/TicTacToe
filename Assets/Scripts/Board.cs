@@ -4,123 +4,94 @@ public class Board : MonoBehaviour
 {
     [Header("Prefabs")]
     [SerializeField] private GameObject cellPrefab;
-    [SerializeField] private GameObject[] marks;
+    [SerializeField] private GameObject[] marks; // Index 0 = X, 1 = O
 
     [Header("Runtime References")]
     [SerializeField] private Cell[] cells = new Cell[9];
 
-    private int[,] boardState = new int[3, 3]; // Added this critical line
+    private int[,] boardState = new int[3, 3]; // 0 = empty, 1 = X, 2 = O
 
     private void Start()
     {
         InitializeBoard();
     }
 
+
     private void InitializeBoard()
     {
-        // Validate prefab
-        if (cellPrefab == null)
+        if (cellPrefab == null || marks == null || marks.Length != 2)
         {
-            Debug.LogError("Cell prefab not assigned!", this);
+            Debug.LogError("Missing required prefabs!", this);
             return;
         }
 
-        // Validate marks
-        if (marks == null || marks.Length != 2)
-        {
-            Debug.LogError("Marks array not properly configured!", this);
-            return;
-        }
-
-        // Create grid
         for (int i = 0; i < 9; i++)
         {
             GameObject cellObj = Instantiate(cellPrefab, transform);
             cellObj.name = $"Cell_{i}";
 
-            // Get and configure cell
             Cell cell = cellObj.GetComponent<Cell>();
             if (cell == null)
             {
-                Debug.LogError("Instantiated cell missing Cell script!", cellObj);
+                Debug.LogError("Cell prefab missing Cell script!", cellObj);
                 continue;
             }
 
-            // Manually assign board reference
-            cell.board = this;
-            cell.index = i;
+            cell.Setup(this, i); // Using Setup instead of Initialize
             cells[i] = cell;
         }
     }
 
     public void MarkCell(int index, int playerIndex)
     {
-        if (index < 0 || index >= 9)
-        {
-            Debug.LogError($"Invalid cell index: {index}");
+        if (!IsValidIndex(index) || !IsValidPlayer(playerIndex) || !IsCellEmpty(index))
             return;
-        }
-
+        Debug.Log($"Cell {index} marked for player {playerIndex}");
+        // Update board state (playerIndex 0 becomes 1 (X), 1 becomes 2 (O))
         int row = index / 3;
         int col = index % 3;
         boardState[row, col] = playerIndex + 1;
 
-        // Safety checks
-        if (cells[index] == null)
+        // Visual representation
+        if (cells[index] != null)
         {
-            Debug.LogError($"Cell at index {index} is null!");
-            return;
+            cells[index].SetInteractable(false);
+            InstantiateMark(cells[index].transform, playerIndex);
         }
+    }
 
-        if (playerIndex < 0 || playerIndex >= marks.Length)
-        {
-            Debug.LogError($"Invalid player index: {playerIndex}");
-            return;
-        }
-
+    private void InstantiateMark(Transform parent, int playerIndex)
+    {
         if (marks[playerIndex] == null)
         {
             Debug.LogError($"Mark prefab for player {playerIndex} is null!");
             return;
         }
 
-        // Instantiate the mark
-        GameObject mark = Instantiate(marks[playerIndex], cells[index].transform);
-        mark.transform.localPosition = Vector3.zero; // This centers the mark
+        GameObject mark = Instantiate(marks[playerIndex], parent);
+        mark.transform.localPosition = Vector3.zero;
         mark.transform.localRotation = Quaternion.identity;
         mark.SetActive(true);
-        cells[index].SetInteractable(false);
     }
 
     public void UndoMark(int index)
     {
-        if (index < 0 || index >= 9)
-        {
-            Debug.LogError($"Invalid cell index: {index}");
-            return;
-        }
+        if (!IsValidIndex(index)) return;
 
         int row = index / 3;
         int col = index % 3;
         boardState[row, col] = 0;
 
-        if (cells[index] == null)
+        if (cells[index] != null)
         {
-            Debug.LogError($"Cell at index {index} is null!");
-            return;
+            cells[index].ClearMark();
+            cells[index].SetInteractable(true);
         }
-
-        cells[index].ClearMark();
-        cells[index].SetInteractable(true);
     }
 
     public bool IsCellEmpty(int index)
     {
-        if (index < 0 || index >= 9)
-        {
-            Debug.LogError($"Invalid cell index: {index}");
-            return false;
-        }
+        if (!IsValidIndex(index)) return false;
 
         int row = index / 3;
         int col = index % 3;
@@ -129,32 +100,34 @@ public class Board : MonoBehaviour
 
     public int CheckWinner()
     {
-        // Check rows, columns, and diagonals
+        // Check rows and columns
         for (int i = 0; i < 3; i++)
         {
             // Rows
-            if (boardState[i, 0] != 0 && boardState[i, 0] == boardState[i, 1] && boardState[i, 1] == boardState[i, 2])
+            if (boardState[i, 0] != 0 &&
+                boardState[i, 0] == boardState[i, 1] &&
+                boardState[i, 1] == boardState[i, 2])
                 return boardState[i, 0];
 
             // Columns
-            if (boardState[0, i] != 0 && boardState[0, i] == boardState[1, i] && boardState[1, i] == boardState[2, i])
+            if (boardState[0, i] != 0 &&
+                boardState[0, i] == boardState[1, i] &&
+                boardState[1, i] == boardState[2, i])
                 return boardState[0, i];
         }
 
         // Diagonals
-        if (boardState[0, 0] != 0 && boardState[0, 0] == boardState[1, 1] && boardState[1, 1] == boardState[2, 2])
+        if (boardState[0, 0] != 0 &&
+            boardState[0, 0] == boardState[1, 1] &&
+            boardState[1, 1] == boardState[2, 2])
             return boardState[0, 0];
 
-        if (boardState[0, 2] != 0 && boardState[0, 2] == boardState[1, 1] && boardState[1, 1] == boardState[2, 0])
+        if (boardState[0, 2] != 0 &&
+            boardState[0, 2] == boardState[1, 1] &&
+            boardState[1, 1] == boardState[2, 0])
             return boardState[0, 2];
 
-        // Check for draw
-        foreach (int cell in boardState)
-        {
-            if (cell == 0) return 0; // Game still ongoing
-        }
-
-        return -1; // Draw
+        return 0; // No winner yet
     }
 
     public int[] GetEmptyCells()
@@ -162,9 +135,20 @@ public class Board : MonoBehaviour
         System.Collections.Generic.List<int> emptyCells = new System.Collections.Generic.List<int>();
         for (int i = 0; i < 9; i++)
         {
-            if (IsCellEmpty(i)) emptyCells.Add(i);
+            if (IsCellEmpty(i))
+                emptyCells.Add(i);
         }
         return emptyCells.ToArray();
+    }
+
+    public bool IsBoardFull()
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            if (IsCellEmpty(i))
+                return false;
+        }
+        return true;
     }
 
     public void ResetBoard()
@@ -174,9 +158,12 @@ public class Board : MonoBehaviour
         {
             if (cell != null)
             {
-                cell.SetInteractable(true);
                 cell.ClearMark();
+                cell.SetInteractable(true);
             }
         }
     }
+
+    private bool IsValidIndex(int index) => index >= 0 && index < 9;
+    private bool IsValidPlayer(int playerIndex) => playerIndex >= 0 && playerIndex < 2;
 }
