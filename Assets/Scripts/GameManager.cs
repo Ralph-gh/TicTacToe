@@ -3,6 +3,8 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+    public static event System.Action<Player> OnGameEnded;
+    public static event System.Action OnGameReset;
 
     [Header("Game Settings")]
     [SerializeField] public Player[] players;
@@ -84,10 +86,34 @@ public class GameManager : MonoBehaviour
     public void EndGame(Player winner)
     {
         gameEnded = true;
+
+        GameResultUI resultUI = FindObjectOfType<GameResultUI>();
+
         foreach (Player player in players)
         {
             player?.EndTurn();
         }
+        OnGameEnded?.Invoke(winner);
         Debug.Log(winner != null ? $"{winner.name} wins!" : "It's a draw!");
+    }
+
+    public void ResetGame()
+    {
+        // Reset board state
+        board.ResetBoard();
+
+        // Hide the panel
+        FindObjectOfType<GameResultUI>().HideResult();
+
+        // Reset game state
+        gameEnded = false;
+        currentPlayer = players[0]; // Human goes first again
+
+        // Notify listeners
+        OnGameReset?.Invoke();
+       
+
+        // Start new game
+        currentPlayer?.BeginTurn();
     }
 }

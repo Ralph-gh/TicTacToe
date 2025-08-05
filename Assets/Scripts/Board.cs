@@ -164,6 +164,7 @@ public class Board : MonoBehaviour
                 cell.SetInteractable(true);
             }
         }
+        FindObjectOfType<GameResultUI>().HideResult();
     }
 
     private bool IsValidIndex(int index) => index >= 0 && index < 9;
